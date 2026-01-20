@@ -1,1 +1,48 @@
-hii
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KTV Stream Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Video.js CSS -->
+  <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+  
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .video-js {
+      width: 100%;
+      max-width: 960px;
+      height: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <video
+    id="ktv-player"
+    class="video-js vjs-default-skin"
+    controls
+    preload="auto"
+    playsinline
+    webkit-playsinline
+    data-setup='{}'
+  >
+    <source
+      src="https://subeesh-zero.github.io/KTV/render.m3u8?auth=ryz6rHUcrRbYES6meUhSotgk3vIXsMGt2JImBkvT3SsrPWxgQgnn7jKO9kcpB3zDFsfSnoifGXi_RcVZaNGJ7pT7T4iUpXHO-ZDXCYr9vWY22uuw3QkG0djp6ea0wfGGqs61tBMHACRluZ0Ev_YOkZKksC4PTzuZh2erPLJ-6NVdPEwJ7JTNdxpW0hOqF6DfZC0o4JPG9GNg9hUW2wn0S4DHeZ5alTvbN2kiytERZ76RHV4F9oQLbyPmWC1TLtNGlugNJAOCADpLl-4KcVY6-RLV8ao_34yQVk1_kFv_TRILlpN2HA9hcABqcejq9gDFO88Uc_dp1tm6ImxkzSq4FWHnumLkXax0WPO3cjrPuDUuqI387lAqRi64kpFdfHhc0IXOrJLmtw5zBedcTaHqd29KHt2W7ZXZGrdUeiRjgRDMaW24P3tlTjlhoJiitaX_z048cYJmGeFdIiI2l8VHe4eRyOKixGZ4p8gZCM8uSRz7Qk-afGsPGWJME3H4gXrQtOCfwRRtIWCglth-tiNuMqvrSJmfj7Gr1Tb5vAQOrMuGCH0=&channel_key_id=557"
+      type="application/x-mpegURL"
+    >
+  </video>
+
+  <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+
+</body>
+</html>
