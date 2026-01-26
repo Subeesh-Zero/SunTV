@@ -3,61 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subeesh Live Player</title>
+    <title>Subeesh Custom Player</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { width: 95%; max-width: 800px; text-align: center; }
-        h2 { color: #3498db; margin-bottom: 20px; }
-        #status { margin-top: 15px; font-size: 14px; color: #888; }
+        body { background: #000; color: #fff; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+        .player-container { width: 95%; max-width: 800px; text-align: center; }
+        video { width: 100%; border-radius: 12px; }
+        h3 { color: #3498db; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>Sun TV Live Player</h2>
-        <video id="player" playsinline controls></video>
-        <div id="status">லோடிங்... (Loading)</div>
-    </div>
+<div class="player-container">
+    <h3>Sun TV HDR - Live</h3>
+    <video id="player" playsinline controls></video>
+</div>
 
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-    <script>
-        const video = document.getElementById('player');
-        const status = document.getElementById('status');
+<script>
+    const video = document.getElementById('player');
+    const source = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
+    
+    // அழகான டிசைனுக்காக Plyr-ஐ இணைக்கிறோம்
+    const player = new Plyr(video);
 
-        // Plyr பிளேயரை ஆக்டிவேட் செய்தல்
-        const player = new Plyr(video);
-
-        // உங்கள் நேரலை லிங்க்
-        const streamUrl = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
-        
-        // CORS தடையை நீக்க 'AllOrigins' Proxy பயன்படுத்துதல்
-        const finalUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(streamUrl);
-
-        function playNow() {
-            if (Hls.isSupported()) {
-                const hls = new Hls({ xhrSetup: (xhr) => { xhr.withCredentials = false; } });
-                hls.loadSource(finalUrl); // ப்ராக்ஸி வழியாக லோட் ஆகிறது
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    status.innerText = "நேரலை ஓடிக்கொண்டிருக்கிறது...";
-                    video.play().catch(() => status.innerText = "Play பட்டனை அழுத்தவும்!");
-                });
-                
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        console.log("Proxy failed, trying direct...");
-                        hls.loadSource(streamUrl); // ப்ராக்ஸி வேலை செய்யாவிட்டால் நேரடியாக
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = streamUrl;
+    // HLS (m3u8) சப்போர்ட்
+    if (Hls.isSupported()) {
+        const hls = new Hls({
+            xhrSetup: function(xhr) {
+                xhr.withCredentials = false;
             }
-        }
+        });
+        // CORS தடையை உடைக்க Proxy வழியாக அனுப்புகிறோம்
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(source);
+        
+        hls.loadSource(proxyUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play().catch(e => console.log("Auto-play blocked"));
+        });
+    } 
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = source;
+    }
+</script>
 
-        window.onload = playNow;
-    </script>
 </body>
 </html>
