@@ -3,40 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subeesh Custom HLS Player</title>
+    <title>Sun TV HDR Live</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body { font-family: sans-serif; background: #000; color: #fff; text-align: center; margin: 0; }
-        .container { padding: 20px; }
-        video { width: 100%; max-width: 800px; border: 2px solid #333; border-radius: 10px; }
-        h2 { color: #f1c40f; }
+        body { background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+        .container { width: 90%; max-width: 800px; text-align: center; }
+        video { width: 100%; border-radius: 10px; background: #222; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Sun TV HDR Player</h2>
-    <video id="video" controls autoplay></video>
+    <h2 id="status">Loading Stream...</h2>
+    <video id="video" controls playsinline></video>
 </div>
 
 <script>
     var video = document.getElementById('video');
+    var status = document.getElementById('status');
+    // உங்கள் சன் நெக்ஸ்ட் லிங்க்
     var videoSrc = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
 
     if (Hls.isSupported()) {
-        var hls = new Hls();
+        var hls = new Hls({
+            debug: false,
+            // சில நேரங்களில் இது தேவைப்படும்
+            xhrSetup: function (xhr, url) {
+                xhr.withCredentials = false; 
+            }
+        });
         hls.loadSource(videoSrc);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            status.innerHTML = "Sun TV HDR - Live";
             video.play();
         });
-    }
-    // Safari மற்றும் iOS பிரவுசர்களில் நேட்டிவ் சப்போர்ட் இருக்கும்
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+                status.innerHTML = "Error: Stream cannot be played (CORS or Expired)";
+                console.log("HLS Error:", data);
+            }
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = videoSrc;
-        video.addEventListener('loadedmetadata', function() {
-            video.play();
-        });
+        status.innerHTML = "Sun TV HDR - Live";
     }
 </script>
 
