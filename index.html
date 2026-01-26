@@ -1,48 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ta">
 <head>
-  <meta charset="UTF-8">
-  <title>KTV Stream Player</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Video.js CSS -->
-  <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
-  
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .video-js {
-      width: 100%;
-      max-width: 960px;
-      height: auto;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subeesh Custom HLS Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { font-family: sans-serif; background: #000; color: #fff; text-align: center; margin: 0; }
+        .container { padding: 20px; }
+        video { width: 100%; max-width: 800px; border: 2px solid #333; border-radius: 10px; }
+        h2 { color: #f1c40f; }
+    </style>
 </head>
-
 <body>
 
-  <video
-    id="ktv-player"
-    class="video-js vjs-default-skin"
-    controls
-    preload="auto"
-    playsinline
-    webkit-playsinline
-    data-setup='{}'
-  >
-    <source
-      src="https://subeesh-zero.github.io/KTV/render.m3u8?auth=ryz6rHUcrRbYES6meUhSotgk3vIXsMGt2JImBkvT3SsrPWxgQgnn7jKO9kcpB3zDFsfSnoifGXi_RcVZaNGJ7pT7T4iUpXHO-ZDXCYr9vWY22uuw3QkG0djp6ea0wfGGqs61tBMHACRluZ0Ev_YOkZKksC4PTzuZh2erPLJ-6NVdPEwJ7JTNdxpW0hOqF6DfZC0o4JPG9GNg9hUW2wn0S4DHeZ5alTvbN2kiytERZ76RHV4F9oQLbyPmWC1TLtNGlugNJAOCADpLl-4KcVY6-RLV8ao_34yQVk1_kFv_TRILlpN2HA9hcABqcejq9gDFO88Uc_dp1tm6ImxkzSq4FWHnumLkXax0WPO3cjrPuDUuqI387lAqRi64kpFdfHhc0IXOrJLmtw5zBedcTaHqd29KHt2W7ZXZGrdUeiRjgRDMaW24P3tlTjlhoJiitaX_z048cYJmGeFdIiI2l8VHe4eRyOKixGZ4p8gZCM8uSRz7Qk-afGsPGWJME3H4gXrQtOCfwRRtIWCglth-tiNuMqvrSJmfj7Gr1Tb5vAQOrMuGCH0=&channel_key_id=557"
-      type="application/x-mpegURL"
-    >
-  </video>
+<div class="container">
+    <h2>Sun TV HDR Player</h2>
+    <video id="video" controls autoplay></video>
+</div>
 
-  <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+<script>
+    var video = document.getElementById('video');
+    var videoSrc = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
+
+    if (Hls.isSupported()) {
+        var hls = new Hls();
+        hls.loadSource(videoSrc);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play();
+        });
+    }
+    // Safari மற்றும் iOS பிரவுசர்களில் நேட்டிவ் சப்போர்ட் இருக்கும்
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = videoSrc;
+        video.addEventListener('loadedmetadata', function() {
+            video.play();
+        });
+    }
+</script>
 
 </body>
 </html>
