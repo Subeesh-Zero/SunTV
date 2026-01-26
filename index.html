@@ -3,52 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sun TV HDR Live</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <title>Subeesh Ultra Player</title>
+    
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+    
     <style>
-        body { background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
-        .container { width: 90%; max-width: 800px; text-align: center; }
-        video { width: 100%; border-radius: 10px; background: #222; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .player-container {
+            width: 100%;
+            max-width: 800px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            background: #334155;
+            color: white;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-play { background: #2563eb; color: white; }
+        .btn-file { background: #64748b; color: white; }
+        .btn:hover { opacity: 0.8; transform: scale(1.05); }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #38bdf8;
+            text-align: center;
+        }
+
+        #status {
+            font-size: 14px;
+            margin-top: 10px;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 id="status">Loading Stream...</h2>
-    <video id="video" controls playsinline></video>
-</div>
+    <h2>Subeesh Online Player</h2>
 
-<script>
-    var video = document.getElementById('video');
-    var status = document.getElementById('status');
-    // உங்கள் சன் நெக்ஸ்ட் லிங்க்
-    var videoSrc = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
+    <div class="player-container">
+        <div class="controls">
+            <input type="text" id="videoUrl" placeholder="வீடியோ லிங்க்-ஐ இங்கே பேஸ்ட் செய்யவும்...">
+            <button class="btn btn-play" onclick="loadUrl()">Play Link</button>
+            
+            <button class="btn btn-file" onclick="document.getElementById('fileInput').click()">Open File</button>
+            <input type="file" id="fileInput" accept="video/*" style="display:none;" onchange="loadFile(event)">
+        </div>
 
-    if (Hls.isSupported()) {
-        var hls = new Hls({
-            debug: false,
-            // சில நேரங்களில் இது தேவைப்படும்
-            xhrSetup: function (xhr, url) {
-                xhr.withCredentials = false; 
+        <div class="video-wrapper">
+            <video id="player" playsinline controls></video>
+        </div>
+        
+        <div id="status">தயார் நிலை (Ready)</div>
+    </div>
+
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <script>
+        // பிளேயரை உருவாக்குதல்
+        const player = new Plyr('#player', {
+            speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2, 4, 8, 16] }
+        });
+
+        const videoElement = document.getElementById('player');
+        const statusText = document.getElementById('status');
+
+        // URL மூலம் வீடியோவை பிளே செய்ய
+        function loadUrl() {
+            const url = document.getElementById('videoUrl').value.trim();
+            if (!url) return alert("தயவுசெய்து ஒரு லிங்க் கொடுக்கவும்!");
+
+            statusText.innerText = "வீடியோ லோட் ஆகிறது...";
+
+            if (url.includes('.m3u8')) {
+                // HLS (m3u8) சப்போர்ட்
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(videoElement);
+                } else {
+                    videoElement.src = url;
+                }
+            } else {
+                // சாதாரண MP4/WebM
+                videoElement.src = url;
             }
-        });
-        hls.loadSource(videoSrc);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            status.innerHTML = "Sun TV HDR - Live";
-            video.play();
-        });
-        hls.on(Hls.Events.ERROR, function (event, data) {
-            if (data.fatal) {
-                status.innerHTML = "Error: Stream cannot be played (CORS or Expired)";
-                console.log("HLS Error:", data);
-            }
-        });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = videoSrc;
-        status.innerHTML = "Sun TV HDR - Live";
-    }
-</script>
+            
+            videoElement.play();
+            statusText.innerText = "தற்போது ஓடிக்கொண்டிருப்பது: URL Stream";
+        }
+
+        // போனில் உள்ள வீடியோ ஃபைலை பிளே செய்ய
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            videoElement.src = url;
+            videoElement.play();
+            statusText.innerText = "தற்போது ஓடிக்கொண்டிருப்பது: " + file.name;
+        }
+    </script>
 
 </body>
 </html>
