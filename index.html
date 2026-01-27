@@ -3,148 +3,105 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Non-Stop Live Player</title>
+    <title>Live Stream Player</title>
     
     <style>
-        /* --- Professional Dark Design --- */
+        /* --- 1. CLEAN CENTER LAYOUT --- */
         body {
-            background-color: #000;
-            font-family: 'Segoe UI', sans-serif;
+            background-color: #000; /* கருப்பு பின்னணி */
             margin: 0;
             padding: 0;
-            color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-        }
-
-        .player-card {
-            width: 100%;
-            max-width: 900px;
-            background: #111;
-            border-radius: 12px;
-            box-shadow: 0 0 50px rgba(0, 100, 255, 0.1);
-            position: relative;
+            height: 100vh;
             overflow: hidden;
         }
 
-        /* 16:9 Aspect Ratio Container */
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%; 
-            background: #000;
-        }
-
+        /* --- 2. VIDEO PLAYER STYLE --- */
         video {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        /* Status Overlay */
-        .status-overlay {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            color: #00ff00;
-            display: none; /* Hidden by default */
-            z-index: 20;
+            max-width: 1000px; /* வீடியோ அளவு */
+            height: auto;
+            max-height: 100vh;
+            outline: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 <body>
 
-    <div class="player-card">
-        <!-- Hidden status to show when we are fixing the stream -->
-        <div class="status-overlay" id="statusMsg">Stream Stabilized</div>
+    <!-- VIDEO PLAYER (Link will be added automatically via Script) -->
+    <video id="video" controls autoplay muted playsinline></video>
 
-        <div class="video-wrapper">
-            <!-- 
-               Playsinline: For Mobile
-               Autoplay/Muted: For Auto Start
-            -->
-            <video id="video" controls autoplay muted playsinline>
-                <source src="https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8" type="application/x-mpegURL">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-    </div>
-
-    <!-- jQuery -->
+    <!-- jQuery Library -->
     <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 
     <script type="text/javascript">
         $(document).ready(function() {
+            
+            // ======================================================
+            // 👇 இங்கே உங்கள் வீடியோ லிங்கை பேஸ்ட் செய்யவும் (PASTE URL HERE) 👇
+            // ======================================================
+            
+            var myStreamURL = "https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8";
+
+            // ======================================================
+            
             var video = document.getElementById('video');
+            var $video = $(video);
+
+            // 1. Load the URL automatically
+            $video.html('<source src="' + myStreamURL + '" type="application/x-mpegURL">');
+            video.load();
+            
+            // Try to play
+            var playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => { console.log("Autoplay waiting for click"); });
+            }
+
+            // --- 2. AUDIO LATENCY FIX (ஆடியோ சிங்க் சரி செய்தல்) ---
+            setInterval(function() {
+                if (video.readyState === 4 && !video.paused) {
+                    // Check seekable range (Live Edge)
+                    var seekable = video.seekable;
+                    if (seekable.length > 0) {
+                        var liveEnd = seekable.end(seekable.length - 1);
+                        var current = video.currentTime;
+                        
+                        // வீடியோ லைவ் டைம் விட 6 நொடிகள் பின் தங்கி இருந்தால் உடனே சரி செய்யும்
+                        if ((liveEnd - current) > 6) {
+                            console.log("Fixing Audio Latency...");
+                            video.currentTime = liveEnd - 1; 
+                        }
+                    }
+                }
+            }, 5000); // Check every 5 seconds
+
+            // --- 3. ANTI-FREEZE FIX (வீடியோ நிற்காமல் ஓட) ---
             var lastTime = 0;
             var stuckCount = 0;
 
-            // 1. Initial Play
-            var playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.log("Autoplay waiting for interaction");
-                });
-            }
-
-            // --- THE FIX: HEARTBEAT MONITOR ---
-            // Checks every 1 second if the video is actually playing
             setInterval(function() {
-                
-                // If video is supposed to be playing (not paused by user)
                 if (!video.paused) {
-                    
-                    // Check if current time is same as last check (FROZEN)
+                    // வீடியோ ஒரே இடத்தில் நின்றால் (Frozen)
                     if (video.currentTime === lastTime) {
-                        stuckCount++; // Count how many seconds it has been stuck
-                        
-                        // If stuck for 2 seconds (Buffering/Frozen)
+                        stuckCount++;
+                        // 2 வினாடிக்கு மேல் நின்றால் ரீலோட் செய்யும்
                         if (stuckCount > 2) {
-                            console.log("Video Freeze Detected! Restarting stream...");
-                            $('#statusMsg').text("Reconnecting Live...").show().delay(2000).fadeOut();
-                            
-                            // Method 1: Jump to Live Edge (If possible)
-                            if(video.seekable.length > 0) {
-                                video.currentTime = video.seekable.end(video.seekable.length - 1);
-                            } 
-                            // Method 2: Force Reload Source (Hard Reset)
-                            else {
-                                var currentSrc = $(video).find('source').attr('src');
-                                video.load(); 
-                                video.play();
-                            }
-                            stuckCount = 0; // Reset counter
+                            console.log("Stream Stuck. Reloading...");
+                            video.load(); 
+                            video.play();
+                            stuckCount = 0;
                         }
                     } else {
-                        // Video is moving fine
                         stuckCount = 0;
                         lastTime = video.currentTime;
                     }
                 }
-            }, 1000); // Check every 1000ms (1 second)
+            }, 1000);
 
-            // --- Error Handling ---
-            // If the browser throws an error (e.g., 404 segment), reload immediately
-            video.addEventListener('error', function() {
-                console.log("Stream Error. Reloading...");
-                video.load();
-                video.play();
-            }, true);
-
-            // If the buffer runs out 'stalled', try to play
-            video.addEventListener('stalled', function() {
-                console.log("Stream Stalled. Pushing play...");
-                video.play();
-            });
         });
     </script>
 
