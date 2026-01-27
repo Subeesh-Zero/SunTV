@@ -1,54 +1,152 @@
 <!DOCTYPE html>
-<html lang="ta">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subeesh Custom Player</title>
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Non-Stop Live Player</title>
+    
     <style>
-        body { background: #000; color: #fff; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        .player-container { width: 95%; max-width: 800px; text-align: center; }
-        video { width: 100%; border-radius: 12px; }
-        h3 { color: #3498db; margin-bottom: 15px; }
+        /* --- Professional Dark Design --- */
+        body {
+            background-color: #000;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .player-card {
+            width: 100%;
+            max-width: 900px;
+            background: #111;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 16:9 Aspect Ratio Container */
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; 
+            background: #000;
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Status Overlay */
+        .status-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #00ff00;
+            display: none; /* Hidden by default */
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
 
-<div class="player-container">
-    <h3>Sun TV HDR - Live</h3>
-    <video id="player" playsinline controls></video>
-</div>
+    <div class="player-card">
+        <!-- Hidden status to show when we are fixing the stream -->
+        <div class="status-overlay" id="statusMsg">Stream Stabilized</div>
 
-<script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <div class="video-wrapper">
+            <!-- 
+               Playsinline: For Mobile
+               Autoplay/Muted: For Auto Start
+            -->
+            <video id="video" controls autoplay muted playsinline>
+                <source src="https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8" type="application/x-mpegURL">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
 
-<script>
-    const video = document.getElementById('player');
-    const source = 'https://livestream10.sunnxt.com/DolbyVision/SunTV_HDR/SunTV_HDR_Endpoints/SunTV-HDR10-IN-index.m3u8';
-    
-    // அழகான டிசைனுக்காக Plyr-ஐ இணைக்கிறோம்
-    const player = new Plyr(video);
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 
-    // HLS (m3u8) சப்போர்ட்
-    if (Hls.isSupported()) {
-        const hls = new Hls({
-            xhrSetup: function(xhr) {
-                xhr.withCredentials = false;
+    <script type="text/javascript">
+        $(document).ready(function() {
+            var video = document.getElementById('video');
+            var lastTime = 0;
+            var stuckCount = 0;
+
+            // 1. Initial Play
+            var playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Autoplay waiting for interaction");
+                });
             }
+
+            // --- THE FIX: HEARTBEAT MONITOR ---
+            // Checks every 1 second if the video is actually playing
+            setInterval(function() {
+                
+                // If video is supposed to be playing (not paused by user)
+                if (!video.paused) {
+                    
+                    // Check if current time is same as last check (FROZEN)
+                    if (video.currentTime === lastTime) {
+                        stuckCount++; // Count how many seconds it has been stuck
+                        
+                        // If stuck for 2 seconds (Buffering/Frozen)
+                        if (stuckCount > 2) {
+                            console.log("Video Freeze Detected! Restarting stream...");
+                            $('#statusMsg').text("Reconnecting Live...").show().delay(2000).fadeOut();
+                            
+                            // Method 1: Jump to Live Edge (If possible)
+                            if(video.seekable.length > 0) {
+                                video.currentTime = video.seekable.end(video.seekable.length - 1);
+                            } 
+                            // Method 2: Force Reload Source (Hard Reset)
+                            else {
+                                var currentSrc = $(video).find('source').attr('src');
+                                video.load(); 
+                                video.play();
+                            }
+                            stuckCount = 0; // Reset counter
+                        }
+                    } else {
+                        // Video is moving fine
+                        stuckCount = 0;
+                        lastTime = video.currentTime;
+                    }
+                }
+            }, 1000); // Check every 1000ms (1 second)
+
+            // --- Error Handling ---
+            // If the browser throws an error (e.g., 404 segment), reload immediately
+            video.addEventListener('error', function() {
+                console.log("Stream Error. Reloading...");
+                video.load();
+                video.play();
+            }, true);
+
+            // If the buffer runs out 'stalled', try to play
+            video.addEventListener('stalled', function() {
+                console.log("Stream Stalled. Pushing play...");
+                video.play();
+            });
         });
-        // CORS தடையை உடைக்க Proxy வழியாக அனுப்புகிறோம்
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(source);
-        
-        hls.loadSource(proxyUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            video.play().catch(e => console.log("Auto-play blocked"));
-        });
-    } 
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = source;
-    }
-</script>
+    </script>
 
 </body>
 </html>
