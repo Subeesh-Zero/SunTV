@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectAxis - Direct Uploader</title>
+    <script src="https://cdn.jsdelivr.net/npm/gramjs/dist/gramjs.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 400px; }
+        h2 { color: #0088cc; }
+        input[type="file"] { margin: 20px 0; display: block; width: 100%; }
+        button { background: #0088cc; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #006699; }
+        #status { margin-top: 20px; font-weight: bold; }
+        #linkContainer { margin-top: 20px; padding: 15px; background: #d4edda; border-radius: 5px; display: none; word-break: break-all; }
+        .link-text { color: #155724; font-size: 14px; margin-bottom: 10px; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>ProjectAxis Uploader</h2>
+    <p>ஃபைலைத் தேர்ந்தெடுத்து 'Upload' பொத்தானை அழுத்தவும்.</p>
+    
+    <input type="file" id="fileInput">
+    <button id="uploadBtn" onclick="uploadToTelegram()">Upload Now</button>
+
+    <div id="status"></div>
+
+    <div id="linkContainer">
+        <div class="link-text">✅ அப்லோட் முடிந்தது! இதோ உங்கள் லிங்க்:</div>
+        <input type="text" id="downloadURL" readonly>
+        <p style="font-size: 12px; color: #666; margin-top: 10px;">(குறிப்பு: இந்த லிங்க் வேலை செய்ய உங்கள் பேக்கெண்ட் சர்வர் ரன் ஆக வேண்டும்)</p>
+    </div>
+</div>
+
+<script>
+    const { TelegramClient } = gramjs;
+    const { StringSession } = gramjs.sessions;
+
+    // --- உங்கள் விபரங்களை இங்கே போடவும் ---
+    const apiId = 22338436; 
+    const apiHash = "dfc5f483a41f358cca2299d01ebe2bee";
+    const session = new StringSession("1AZWarzkBuz-oyxDYA_e1gTMi0Agf1QrPbtFk--hrau8hdn-7QJNdcJtxDS-8zxZAo9BmQcd8PXSrlMC0dzpLdj9teMAjqTzhF4txSWFF31-jPkcDJQbnGgBm4pyxkFTBmAMNs5lASi2jMQPgeybW1Jn1EXh_3EUUoCgD_IXKIPeb-WtiwSM7vggfL37r9qJTXT9hwn0c6lG69uWHzmTZvESykGWzhBnjVrk-xNSZkEcV5enqhYt-aGN9pTutR-a9vwcE2H3zQjbq9AGWmMdtht4XS7C76wMJ2tN5ou8qcBvEh-ngKYHyVOzUMC4Nmo8Jy7F_2UvO-qJd2jjW9_9z5AKvbt963Po=");
+
+    async function uploadToTelegram() {
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const btn = document.getElementById('uploadBtn');
+        const linkContainer = document.getElementById('linkContainer');
+        const downloadURLInput = document.getElementById('downloadURL');
+
+        if (!fileInput.files.length) {
+            alert("தயவுசெய்து ஒரு பைலைத் தேர்ந்தெடுக்கவும்!");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        btn.disabled = true;
+        status.style.color = "blue";
+        status.innerText = "டெலிகிராம் உடன் இணைகிறது...";
+
+        try {
+            const client = new TelegramClient(session, apiId, apiHash, { connectionRetries: 5 });
+            await client.connect();
+
+            status.innerText = "அப்லோட் ஆகிறது... 0%";
+
+            // ஃபைலை 'Saved Messages'-க்கு அனுப்புதல்
+            const result = await client.sendFile("me", {
+                file: file,
+                chunkSize: 512 * 1024,
+                progressCallback: (p) => {
+                    status.innerText = `அப்லோட் ஆகிறது... ${Math.round(p * 100)}%`;
+                }
+            });
+
+            status.innerText = "லிங்க் தயார் செய்யப்படுகிறது...";
+            
+            // டவுன்லோட் லிங்க் உருவாக்குதல்
+            // உங்கள் சர்வர் ரன் ஆகும் போர்ட் அல்லது டொமைனை இங்கே கொடுக்க வேண்டும்
+            const messageId = result.id;
+            const generatedLink = `http://localhost:8080/download/${messageId}`;
+
+            downloadURLInput.value = generatedLink;
+            linkContainer.style.display = "block";
+            status.style.color = "green";
+            status.innerText = "அப்லோட் வெற்றி!";
+
+        } catch (err) {
+            console.error(err);
+            status.style.color = "red";
+            status.innerText = "தவறு: " + err.message;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
