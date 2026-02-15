@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Cloud Upload</title>
+    <title>Telegram File Uploader</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,7 +11,7 @@
             padding: 0;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -29,206 +29,192 @@
         }
         h1 {
             color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
-            text-align: center;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
             margin-bottom: 30px;
-            font-size: 14px;
+            text-align: center;
+            font-weight: 600;
         }
-        .upload-area {
-            border: 2px dashed #ccc;
+        .file-input {
+            margin-bottom: 20px;
+        }
+        .file-label {
+            display: block;
+            background: #f0f0f0;
+            border: 2px dashed #999;
             border-radius: 10px;
             padding: 30px;
             text-align: center;
             cursor: pointer;
-            transition: border-color 0.3s;
-            margin-bottom: 20px;
+            transition: all 0.3s;
         }
-        .upload-area:hover {
+        .file-label:hover {
             border-color: #667eea;
+            background: #e8e8e8;
         }
-        .upload-area.dragover {
-            border-color: #667eea;
-            background: #f0f3ff;
-        }
-        .upload-icon {
+        .file-label i {
             font-size: 48px;
-            margin-bottom: 10px;
             color: #667eea;
+            margin-bottom: 10px;
         }
-        .file-name {
-            margin-top: 10px;
-            font-size: 14px;
+        .file-label span {
+            display: block;
             color: #666;
-            word-break: break-all;
         }
-        button {
+        #fileInput {
+            display: none;
+        }
+        .button {
             width: 100%;
-            padding: 14px;
-            background: #667eea;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: transform 0.2s;
         }
-        button:hover {
-            background: #5a67d8;
+        .button:hover {
+            transform: translateY(-2px);
         }
-        button:disabled {
-            background: #ccc;
+        .button:disabled {
+            opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
-        .status {
+        #status {
             margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-        .status.success {
-            background: #c6f6d5;
-            color: #22543d;
-            display: block;
-        }
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
-            display: block;
-        }
-        .download-link {
-            margin-top: 15px;
-            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
             word-break: break-all;
         }
-        .download-link a {
+        .success {
+            color: #2ecc71;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        a {
             color: #667eea;
             text-decoration: none;
             font-weight: 600;
         }
-        .download-link a:hover {
+        a:hover {
             text-decoration: underline;
         }
-        .note {
+        .footer {
             margin-top: 20px;
-            font-size: 12px;
-            color: #999;
             text-align: center;
+            color: #999;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>☁️ Telegram Cloud</h1>
-        <div class="subtitle">Upload files directly to your Telegram Saved Messages</div>
-
-        <div class="upload-area" id="dropArea">
-            <div class="upload-icon">📁</div>
-            <div>Click or drag file here</div>
-            <div class="file-name" id="fileName"></div>
-            <input type="file" id="fileInput" style="display: none;">
+        <h1>📤 Telegram File Uploader</h1>
+        <div class="file-input">
+            <label for="fileInput" class="file-label" id="fileLabel">
+                <i>📁</i>
+                <span>Click to select a file</span>
+            </label>
+            <input type="file" id="fileInput">
         </div>
-
-        <button id="uploadBtn" disabled>Upload</button>
-
-        <div class="status" id="status"></div>
-        <div class="download-link" id="downloadLink"></div>
-        <div class="note">Make sure your local backend is running at <strong>http://localhost:8080</strong></div>
+        <button class="button" id="uploadBtn" disabled>Upload to Telegram</button>
+        <div id="status">
+            <p>Ready to upload...</p>
+        </div>
+        <div class="footer">
+            Connected to local backend at <strong>http://localhost:8080</strong>
+        </div>
     </div>
 
     <script>
         // Configuration - change this if your backend runs elsewhere
-        const API_BASE = 'http://localhost:8080';
+        const API_URL = "http://localhost:8080";
 
-        // DOM elements
-        const dropArea = document.getElementById('dropArea');
         const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
+        const fileLabel = document.getElementById('fileLabel');
         const uploadBtn = document.getElementById('uploadBtn');
         const statusDiv = document.getElementById('status');
-        const downloadLinkDiv = document.getElementById('downloadLink');
 
-        let selectedFile = null;
-
-        // Click on drop area triggers file input
-        dropArea.addEventListener('click', () => fileInput.click());
-
-        // File input change
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
-
-        // Drag & drop events
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.classList.add('dragover');
-        });
-
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.classList.remove('dragover');
-        });
-
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
-        });
-
-        function handleFiles(files) {
-            if (files.length > 0) {
-                selectedFile = files[0];
-                fileName.textContent = selectedFile.name;
+        // Update label when file is selected
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                fileLabel.innerHTML = `<i>📄</i><span>${this.files[0].name}</span>`;
                 uploadBtn.disabled = false;
-                statusDiv.className = 'status';
-                statusDiv.style.display = 'none';
-                downloadLinkDiv.innerHTML = '';
+            } else {
+                fileLabel.innerHTML = `<i>📁</i><span>Click to select a file</span>`;
+                uploadBtn.disabled = true;
             }
-        }
+        });
 
-        // Upload button click
-        uploadBtn.addEventListener('click', async () => {
-            if (!selectedFile) return;
+        // Handle upload
+        uploadBtn.addEventListener('click', async function() {
+            const file = fileInput.files[0];
+            if (!file) {
+                statusDiv.innerHTML = '<p class="error">❌ No file selected</p>';
+                return;
+            }
 
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            formData.append('file', file);
 
-            // Disable button during upload
+            statusDiv.innerHTML = '<p>⏳ Uploading to Telegram... (please wait)</p>';
             uploadBtn.disabled = true;
-            statusDiv.className = 'status';
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = 'Uploading...';
 
             try {
-                const response = await fetch(`${API_BASE}/upload`, {
+                const response = await fetch(`${API_URL}/upload`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    mode: 'cors'
                 });
 
-                const data = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(data.error || 'Upload failed');
+                    const errorText = await response.text();
+                    throw new Error(`Server error (${response.status}): ${errorText}`);
                 }
 
-                // Success
-                statusDiv.className = 'status success';
-                statusDiv.textContent = '✅ Upload successful!';
-
-                const messageId = data.message_id;
-                const downloadUrl = `${API_BASE}/dl/${messageId}`;
-                downloadLinkDiv.innerHTML = `
-                    <a href="${downloadUrl}" target="_blank">📥 Download file</a>
-                    <br><small>(right-click and save as)</small>
-                `;
+                const data = await response.json();
+                if (data.success) {
+                    const downloadUrl = `${API_URL}${data.download_url}`;
+                    statusDiv.innerHTML = `
+                        <p class="success">✅ Upload successful!</p>
+                        <p>📥 Download link: <a href="${downloadUrl}" target="_blank">${downloadUrl}</a></p>
+                        <p><small>Right-click and "Save as..." to download</small></p>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `<p class="error">❌ Upload failed: ${data.error}</p>`;
+                }
             } catch (error) {
-                statusDiv.className = 'status error';
-                statusDiv.textContent = `❌ Error: ${error.message}`;
+                statusDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
             } finally {
+                uploadBtn.disabled = false;
+            }
+        });
+
+        // Optional: drag & drop enhancements
+        fileLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#667eea';
+            fileLabel.style.background = '#e8e8e8';
+        });
+
+        fileLabel.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#999';
+            fileLabel.style.background = '#f0f0f0';
+        });
+
+        fileLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#999';
+            fileLabel.style.background = '#f0f0f0';
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                fileLabel.innerHTML = `<i>📄</i><span>${e.dataTransfer.files[0].name}</span>`;
                 uploadBtn.disabled = false;
             }
         });
