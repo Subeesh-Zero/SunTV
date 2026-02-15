@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Uploader · Connect to Local Server</title>
+    <title>Telegram Uploader · Ngrok</title>
     <style>
         * {
             margin: 0;
@@ -11,7 +11,7 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(145deg, #1e2b3f 0%, #0f1a2b 100%);
             min-height: 100vh;
             display: flex;
@@ -27,100 +27,42 @@
             border-radius: 2rem;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             width: 100%;
-            max-width: 560px;
+            max-width: 600px;
             padding: 2.5rem 2rem;
             color: #eef4ff;
-            transition: all 0.2s;
         }
         h1 {
             font-weight: 600;
             font-size: 2rem;
-            letter-spacing: -0.02em;
-            margin-bottom: 0.25rem;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        .subtitle {
-            color: #9aaec9;
-            font-size: 0.95rem;
+        .url-input {
             margin-bottom: 2rem;
-            border-left: 3px solid #3b82f6;
-            padding-left: 1rem;
         }
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: rgba(0,0,0,0.3);
-            border-radius: 100px;
-            padding: 0.6rem 1.2rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(255,255,255,0.05);
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
             font-weight: 500;
+            color: #b0c4de;
         }
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #f59e0b;
-            box-shadow: 0 0 8px #f59e0b;
-            transition: background 0.3s, box-shadow 0.3s;
-        }
-        .dot.connected {
-            background: #10b981;
-            box-shadow: 0 0 12px #10b981;
-        }
-        .dot.disconnected {
-            background: #ef4444;
-            box-shadow: 0 0 8px #ef4444;
-        }
-        .server-url {
-            font-family: 'Fira Code', monospace;
-            background: #1e293b;
-            padding: 0.25rem 0.75rem;
-            border-radius: 40px;
-            font-size: 0.9rem;
-            color: #94a3b8;
-        }
-        .btn {
-            background: linear-gradient(to right, #3b82f6, #2563eb);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 0.9rem 1.8rem;
-            border-radius: 40px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s;
-            box-shadow: 0 8px 16px -4px #1e3a8a50;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            border: 1px solid rgba(255,255,255,0.1);
+        input[type="url"] {
             width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: #1e293b;
+            border: 1px solid #3b4a5e;
+            border-radius: 2rem;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
         }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 20px -6px #1e3a8a;
+        input[type="url"]:focus {
+            border-color: #3b82f6;
         }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background: linear-gradient(to right, #64748b, #475569);
-            box-shadow: none;
-        }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid #3b82f6;
-            box-shadow: none;
-            color: #3b82f6;
-        }
-        .btn-outline:hover {
-            background: #1e3a8a20;
-        }
-        .upload-area {
+        .file-area {
             margin-top: 2rem;
             border-top: 1px solid #334155;
             padding-top: 2rem;
@@ -148,6 +90,29 @@
         #fileInput {
             display: none;
         }
+        .btn {
+            background: linear-gradient(to right, #3b82f6, #2563eb);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.9rem 1.8rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 8px 16px -4px #1e3a8a50;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px -6px #1e3a8a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #64748b;
+        }
         #status {
             background: #111c2e;
             border-radius: 1.2rem;
@@ -173,188 +138,134 @@
     </style>
 </head>
 <body>
-    <div class="card" id="app">
+    <div class="card">
         <h1>📡 Telegram Bridge</h1>
-        <div class="subtitle">Upload files to your Saved Messages & get direct links</div>
 
-        <!-- Server connection status & controls -->
-        <div class="status-indicator">
-            <span class="dot" id="connectionDot"></span>
-            <span id="connectionText">Checking local server...</span>
-            <span class="server-url">http://localhost:8080</span>
+        <!-- Server URL input -->
+        <div class="url-input">
+            <label for="serverUrl">🌐 Ngrok Server URL (from terminal)</label>
+            <input type="url" id="serverUrl" placeholder="https://xxxx.ngrok-free.app" value="http://localhost:8080">
+            <p style="font-size:0.8rem; margin-top:0.4rem; color:#9aaec9;">Paste the ngrok URL shown in the Python terminal</p>
         </div>
 
-        <!-- Show this area only if connected, otherwise show warning -->
-        <div id="connectedContent" style="display: none;">
-            <div class="upload-area">
-                <div class="file-input">
-                    <label for="fileInput" class="file-label" id="fileLabel">
-                        <i>📎</i>
-                        <span>Click to choose a file</span>
-                    </label>
-                    <input type="file" id="fileInput">
-                </div>
-                <button class="btn" id="uploadBtn" disabled>⬆️ Upload to Telegram</button>
-                <div id="status">Ready to upload...</div>
-            </div>
-        </div>
+        <!-- Upload area -->
+        <div class="file-area">
+            <label for="fileInput" class="file-label" id="fileLabel">
+                <i>📎</i>
+                <span>Click to choose a file</span>
+            </label>
+            <input type="file" id="fileInput">
 
-        <div id="disconnectedContent">
-            <p style="background: #2d1f2d; padding: 1.2rem; border-radius: 1rem; border-left: 4px solid #f87171;">
-                ⚠️ Local server not reachable.<br>
-                <span style="font-size:0.9rem;">Make sure you have started the backend:</span>
-            </p>
-            <pre style="background:#0b1622; padding:1rem; border-radius:1rem; margin:1rem 0; overflow-x:auto;">python app.py</pre>
-            <button class="btn btn-outline" id="retryBtn">🔄 Retry connection</button>
+            <button class="btn" id="uploadBtn" disabled>⬆️ Upload to Telegram</button>
+            <div id="status">Ready to upload...</div>
         </div>
 
         <div class="footer-note">
-            Hosted on GitHub Pages · backend runs on your machine (port 8080)
+            Frontend hosted on GitHub Pages · Backend runs on your machine (ngrok)
         </div>
     </div>
 
     <script>
         (function() {
-            const API_URL = "http://localhost:8080";
-            const connectionDot = document.getElementById('connectionDot');
-            const connectionText = document.getElementById('connectionText');
-            const connectedDiv = document.getElementById('connectedContent');
-            const disconnectedDiv = document.getElementById('disconnectedContent');
-            const retryBtn = document.getElementById('retryBtn');
-
-            // Upload elements
+            // Elements
+            const serverUrlInput = document.getElementById('serverUrl');
             const fileInput = document.getElementById('fileInput');
             const fileLabel = document.getElementById('fileLabel');
             const uploadBtn = document.getElementById('uploadBtn');
             const statusDiv = document.getElementById('status');
 
-            let isConnected = false;
+            let currentServerUrl = serverUrlInput.value.trim();
 
-            // Function to test connection
-            async function checkConnection() {
-                connectionDot.className = 'dot';
-                connectionText.innerText = 'Checking local server...';
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 sec timeout
-                    const response = await fetch(API_URL + '/', { signal: controller.signal, mode: 'cors' });
-                    clearTimeout(timeoutId);
-                    if (response.ok) {
-                        isConnected = true;
-                        connectionDot.classList.add('connected');
-                        connectionText.innerText = 'Connected to local server';
-                        connectedDiv.style.display = 'block';
-                        disconnectedDiv.style.display = 'none';
-                    } else {
-                        throw new Error('Not OK');
-                    }
-                } catch (err) {
-                    isConnected = false;
-                    connectionDot.classList.add('disconnected');
-                    connectionText.innerText = 'Server offline';
-                    connectedDiv.style.display = 'none';
-                    disconnectedDiv.style.display = 'block';
+            // Update server URL on change
+            serverUrlInput.addEventListener('input', function() {
+                currentServerUrl = this.value.trim();
+                // Remove trailing slash if present
+                if (currentServerUrl.endsWith('/')) {
+                    currentServerUrl = currentServerUrl.slice(0, -1);
                 }
-            }
+            });
 
-            // Initial check
-            checkConnection();
-
-            // Retry button
-            if (retryBtn) {
-                retryBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    checkConnection();
-                });
-            }
-
-            // File input change handler (only if connected)
-            if (fileInput) {
-                fileInput.addEventListener('change', function() {
-                    if (this.files.length > 0) {
-                        fileLabel.innerHTML = `<i>📄</i><span>${this.files[0].name}</span>`;
-                        uploadBtn.disabled = false;
-                    } else {
-                        fileLabel.innerHTML = `<i>📎</i><span>Click to choose a file</span>`;
-                        uploadBtn.disabled = true;
-                    }
-                });
-            }
-
-            // Upload button handler
-            if (uploadBtn) {
-                uploadBtn.addEventListener('click', async function() {
-                    if (!isConnected) {
-                        statusDiv.innerHTML = '<span class="error">❌ Not connected to server</span>';
-                        return;
-                    }
-
-                    const file = fileInput.files[0];
-                    if (!file) {
-                        statusDiv.innerHTML = '<span class="error">❌ No file selected</span>';
-                        return;
-                    }
-
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    statusDiv.innerHTML = '<span>⏳ Uploading to Telegram... (please wait)</span>';
+            // File selection
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    fileLabel.innerHTML = `<i>📄</i><span>${this.files[0].name}</span>`;
+                    uploadBtn.disabled = false;
+                } else {
+                    fileLabel.innerHTML = `<i>📎</i><span>Click to choose a file</span>`;
                     uploadBtn.disabled = true;
+                }
+            });
 
-                    try {
-                        const response = await fetch(`${API_URL}/upload`, {
-                            method: 'POST',
-                            body: formData,
-                            mode: 'cors'
-                        });
+            // Upload button
+            uploadBtn.addEventListener('click', async function() {
+                const file = fileInput.files[0];
+                if (!file) {
+                    statusDiv.innerHTML = '<span class="error">❌ No file selected</span>';
+                    return;
+                }
 
-                        if (!response.ok) {
-                            const errText = await response.text();
-                            throw new Error(`Server error (${response.status}): ${errText}`);
-                        }
+                if (!currentServerUrl) {
+                    statusDiv.innerHTML = '<span class="error">❌ Server URL is empty</span>';
+                    return;
+                }
 
-                        const data = await response.json();
-                        if (data.success) {
-                            const downloadUrl = `${API_URL}${data.download_url}`;
-                            statusDiv.innerHTML = `
-                                <span class="success">✅ Upload successful!</span><br>
-                                📥 <a href="${downloadUrl}" target="_blank">${downloadUrl}</a><br>
-                                <small>(right‑click → save as)</small>
-                            `;
-                        } else {
-                            statusDiv.innerHTML = `<span class="error">❌ Upload failed: ${data.error}</span>`;
-                        }
-                    } catch (error) {
-                        statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
-                    } finally {
-                        uploadBtn.disabled = false;
+                const formData = new FormData();
+                formData.append('file', file);
+
+                statusDiv.innerHTML = '<span>⏳ Uploading to Telegram... (please wait)</span>';
+                uploadBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${currentServerUrl}/upload`, {
+                        method: 'POST',
+                        body: formData,
+                        mode: 'cors'
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`Server error (${response.status}): ${errText}`);
                     }
-                });
-            }
 
-            // Drag & drop (optional)
-            if (fileLabel) {
-                fileLabel.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    fileLabel.style.borderColor = '#3b82f6';
-                    fileLabel.style.background = '#263445';
-                });
-                fileLabel.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    fileLabel.style.borderColor = '#475569';
-                    fileLabel.style.background = '#1e293b';
-                });
-                fileLabel.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    fileLabel.style.borderColor = '#475569';
-                    fileLabel.style.background = '#1e293b';
-                    if (e.dataTransfer.files.length > 0) {
-                        fileInput.files = e.dataTransfer.files;
-                        fileLabel.innerHTML = `<i>📄</i><span>${e.dataTransfer.files[0].name}</span>`;
-                        uploadBtn.disabled = false;
+                    const data = await response.json();
+                    if (data.success) {
+                        const downloadUrl = `${currentServerUrl}${data.download_url}`;
+                        statusDiv.innerHTML = `
+                            <span class="success">✅ Upload successful!</span><br>
+                            📥 <a href="${downloadUrl}" target="_blank">${downloadUrl}</a><br>
+                            <small>(right‑click → save as)</small>
+                        `;
+                    } else {
+                        statusDiv.innerHTML = `<span class="error">❌ Upload failed: ${data.error}</span>`;
                     }
-                });
-            }
+                } catch (error) {
+                    statusDiv.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                } finally {
+                    uploadBtn.disabled = false;
+                }
+            });
+
+            // Drag & drop
+            fileLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileLabel.style.borderColor = '#3b82f6';
+                fileLabel.style.background = '#263445';
+            });
+            fileLabel.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                fileLabel.style.borderColor = '#475569';
+                fileLabel.style.background = '#1e293b';
+            });
+            fileLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileLabel.style.borderColor = '#475569';
+                fileLabel.style.background = '#1e293b';
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileLabel.innerHTML = `<i>📄</i><span>${e.dataTransfer.files[0].name}</span>`;
+                    uploadBtn.disabled = false;
+                }
+            });
         })();
     </script>
 </body>
