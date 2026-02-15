@@ -1,65 +1,237 @@
 <!DOCTYPE html>
-<html lang="ta">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ProjectAxis - Direct Uploader</title>
-    <script src="https://cdn.jsdelivr.net/npm/gramjs/dist/gramjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Cloud Upload</title>
     <style>
-        body { font-family: sans-serif; background: #eef2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 400px; }
-        #linkContainer { margin-top: 20px; padding: 15px; background: #d4edda; border-radius: 5px; display: none; word-break: break-all; }
-        input[type="text"] { width: 90%; padding: 8px; margin-top: 10px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            word-break: break-all;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            display: block;
+        }
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            display: block;
+        }
+        .download-link {
+            margin-top: 15px;
+            text-align: center;
+            word-break: break-all;
+        }
+        .download-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .download-link a:hover {
+            text-decoration: underline;
+        }
+        .note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>ProjectAxis Uploader</h2>
-        <input type="file" id="fileInput"><br><br>
-        <button id="uploadBtn" onclick="uploadToTelegram()">Upload Now</button>
-        <div id="status" style="margin-top: 20px;"></div>
-        <div id="linkContainer">
-            <div>✅ லிங்க் தயார்:</div>
-            <input type="text" id="downloadURL" readonly>
+    <div class="container">
+        <h1>☁️ Telegram Cloud</h1>
+        <div class="subtitle">Upload files directly to your Telegram Saved Messages</div>
+
+        <div class="upload-area" id="dropArea">
+            <div class="upload-icon">📁</div>
+            <div>Click or drag file here</div>
+            <div class="file-name" id="fileName"></div>
+            <input type="file" id="fileInput" style="display: none;">
         </div>
+
+        <button id="uploadBtn" disabled>Upload</button>
+
+        <div class="status" id="status"></div>
+        <div class="download-link" id="downloadLink"></div>
+        <div class="note">Make sure your local backend is running at <strong>http://localhost:8080</strong></div>
     </div>
 
     <script>
-        async function uploadToTelegram() {
-            const fileInput = document.getElementById('fileInput');
-            const status = document.getElementById('status');
-            const btn = document.getElementById('uploadBtn');
+        // Configuration - change this if your backend runs elsewhere
+        const API_BASE = 'http://localhost:8080';
 
-            if (!fileInput.files.length) return alert("File-ஐத் தேர்ந்தெடுக்கவும்!");
+        // DOM elements
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statusDiv = document.getElementById('status');
+        const downloadLinkDiv = document.getElementById('downloadLink');
 
-            btn.disabled = true;
-            status.innerText = "இணைகிறது...";
+        let selectedFile = null;
 
-            try {
-                // GramJS Initialization
-                const { TelegramClient } = window.gramjs;
-                const { StringSession } = window.gramjs.sessions;
-                
-                const session = new StringSession("உங்கள்_நீண்ட_SESSION_STRING_இங்கே");
-                const client = new TelegramClient(session, 22338436, "dfc5f483a41f358cca2299d01ebe2bee", { connectionRetries: 5 });
-                
-                await client.connect();
-                status.innerText = "அப்லோட் ஆகிறது...";
+        // Click on drop area triggers file input
+        dropArea.addEventListener('click', () => fileInput.click());
 
-                const result = await client.sendFile("me", {
-                    file: fileInput.files[0],
-                    chunkSize: 512 * 1024,
-                    progressCallback: (p) => status.innerText = `அப்லோட்: ${Math.round(p * 100)}%`
-                });
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
 
-                const messageId = result.id;
-                document.getElementById('downloadURL').value = `http://localhost:8080/download/${messageId}`;
-                document.getElementById('linkContainer').style.display = "block";
-                status.innerText = "வெற்றி!";
-            } catch (err) {
-                status.innerText = "தவறு: " + err.message;
-                btn.disabled = false;
+        // Drag & drop events
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                selectedFile = files[0];
+                fileName.textContent = selectedFile.name;
+                uploadBtn.disabled = false;
+                statusDiv.className = 'status';
+                statusDiv.style.display = 'none';
+                downloadLinkDiv.innerHTML = '';
             }
         }
+
+        // Upload button click
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            // Disable button during upload
+            uploadBtn.disabled = true;
+            statusDiv.className = 'status';
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Uploading...';
+
+            try {
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+                // Success
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Upload successful!';
+
+                const messageId = data.message_id;
+                const downloadUrl = `${API_BASE}/dl/${messageId}`;
+                downloadLinkDiv.innerHTML = `
+                    <a href="${downloadUrl}" target="_blank">📥 Download file</a>
+                    <br><small>(right-click and save as)</small>
+                `;
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
